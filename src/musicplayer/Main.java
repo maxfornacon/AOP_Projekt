@@ -1,21 +1,25 @@
 package musicplayer;
 
 import java.io.File;
-import java.util.LinkedList;
-import java.util.Queue;
-
 import javafx.application.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
+import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Slider;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
@@ -31,7 +35,10 @@ public class Main extends Application{
 	Track track;
 	Media media;
 	MediaPlayer player;
-	Queue<Track> queue = new LinkedList<Track>();
+	ObservableList<Track> data = FXCollections.observableArrayList();
+	TableView<Track> table;
+	Button btnPlay, btnPause, btnPrev, btnNext;
+	Label lblTitle, lblInterpret;
 	
 	public static void main(String[] args) {
 		launch(args);
@@ -74,18 +81,19 @@ public class Main extends Application{
 		for (int i = 0; i < 4; i++) {
 			leftMenu.getChildren().add(linkList[i]);
 		}
-	
+		
+		//BOTTOM BAR
 		GridPane bottomBar = new GridPane();
 		bottomBar.setPadding(new Insets(10, 10, 10, 10));
 		bottomBar.setVgap(5); 
 		bottomBar.setHgap(5);  
 		bottomBar.setAlignment(Pos.CENTER); 
 		
-		Button btnPlay = new Button("Play");
-		Button btnPause = new Button("Pause");
+		btnPlay = new Button("Play");
+		btnPause = new Button("Pause");
 		btnPause.setVisible(false);
-		Button btnPrev = new Button("prev");
-		Button btnNext = new Button("next");
+		btnPrev = new Button("prev");
+		btnNext = new Button("next");
 		
 		Slider volumeSlider = new Slider();
 		volumeSlider.setMin(0);
@@ -114,20 +122,20 @@ public class Main extends Application{
 			//configureFileChooser(fileChooser);
             File file = fileChooser.showOpenDialog(window);
             String s = file.toString();
-			s = s.replaceAll(" ", "%20");
-			s = s.replace("\\", "/");
 			track = new Track(s);
-			media = new Media("file:///" + track.getPath());
-			player = new MediaPlayer(media); 
+			play(track);
 
 		});
-		
-		
-		
+
 		btnPlay.setOnAction(e -> {
-			player.play();
-			btnPlay.setVisible(false);
-			btnPause.setVisible(true);
+			try {
+				player.play();
+				btnPlay.setVisible(false);
+				btnPause.setVisible(true);
+			} catch (Exception e2) {
+				// TODO: handle exception
+			}
+			
 		});
 		btnPause.setOnAction(e -> { 
 			player.pause();
@@ -135,15 +143,47 @@ public class Main extends Application{
 			btnPause.setVisible(false);
 		});
 		
-		bottomBar.add(btnPrev, 0, 0);
-		bottomBar.add(btnPlay, 1, 0);
-		bottomBar.add(btnPause, 1, 0);
-		bottomBar.add(btnNext, 2, 0);
-		bottomBar.add(volumeSlider, 3, 0);
+		lblTitle = new Label("Titel");
+		lblInterpret = new Label("Interpret");
+		
+		Slider progressBar = new Slider();
+		
+		bottomBar.add(progressBar, 0, 0);
+		bottomBar.add(lblTitle, 0, 1);
+		bottomBar.add(lblInterpret, 0, 2);
+		bottomBar.add(btnPrev, 2, 1);
+		bottomBar.add(btnPlay, 3, 1);
+		bottomBar.add(btnPause, 3, 1);
+		bottomBar.add(btnNext, 4, 1);
+		bottomBar.add(volumeSlider, 5, 1);
+		
+		TableColumn<Track, String> pathColumn = new TableColumn<>("Path");
+		pathColumn.setMinWidth(200);
+		
+		TableColumn<Track, String> titleColumn = new TableColumn<>("Titel");
+		titleColumn.setMinWidth(200);
+		pathColumn.setCellValueFactory(new PropertyValueFactory<>("path"));
+		titleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
+		
+		table = new TableView<>();
+		table.setRowFactory(tv -> {
+            TableRow<Track> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && (! row.isEmpty()) ) {
+                    Track rowData = row.getItem();
+                    System.out.println("Double click on: " + rowData.getPath());
+                    play(rowData);
+                }
+            });
+            return row ;
+        });
+		table.setItems(getTracks());
+		table.getColumns().addAll(titleColumn, pathColumn);
 		
 		BorderPane borderPane = new BorderPane();
 		borderPane.setTop(menuBar);
 		borderPane.setLeft(leftMenu);
+		borderPane.setCenter(table);
 		borderPane.setBottom(bottomBar);
 		
 		Scene scene = new Scene(borderPane, 1000, 800);
@@ -151,33 +191,52 @@ public class Main extends Application{
 		window.show();
 	}
 	
+	public ObservableList<Track> getTracks() {
+		ObservableList<Track> tracks = FXCollections.observableArrayList();
+		return tracks;
+	}
+	
+	public void play(Track track) {
+		try {
+			player.stop();
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+		media = new Media("file:///" + track.getPath());
+		player = new MediaPlayer(media); 
+		player.play();
+		btnPlay.setVisible(false);
+		btnPause.setVisible(true);
+		
+		lblTitle.setText(track.getTitle());
+		lblInterpret.setText(track.getInterpret());
+	}
+	
 	public void initDir(File dir) {
 		File[] files = dir.listFiles();
 		//Liest alle Datein ohne Unterordner ein
-		if (files != null) {
+		/*if (files != null) {
 			for (int i = 0; i < files.length; i++) {
 				if (files[i].isFile() && files[i].toString().toLowerCase().endsWith( ".mp3")) {
-					//System.out.println(files[i].getAbsolutePath());
+					System.out.println(files[i].getAbsolutePath());
 					Track track = new Track(files[i].getAbsolutePath());
 					queue.add(track);
 				}
 			}
-		}
+		}*/
 		
 		//Liest Datein aus Ordner + Unterordner
-		/*if (files != null) {
+		if (files != null) {
 			for (int i = 0; i < files.length; i++) {
-				System.out.print(files[i].getAbsolutePath());
 				if (files[i].isDirectory()) {
-					System.out.print(" (Ordner)\n");
-					initDir(files[i]); // ruft sich selbst mit dem 
-						// Unterverzeichnis als Parameter auf
+					initDir(files[i]); // ruft sich selbst mit dem Unterverzeichnis als Parameter auf
 				}
 				else {
-					System.out.print(" (Datei)\n");
+					if (files[i].isFile() && files[i].toString().toLowerCase().endsWith( ".mp3")) {
+						table.getItems().add(new Track(files[i].getAbsolutePath()));	
+					}
 				}
 			}
-		}*/
+		}
 	}
-	
 }

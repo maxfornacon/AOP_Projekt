@@ -1,44 +1,28 @@
 package musicplayer;
 
 
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-
-import javafx.collections.MapChangeListener.Change;
 import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
 
 public class Track {
-	private String title;
+	public String title;
 	private String path;
 	private String genre;
-	private String interpret;
+	private String artist;
 	private String album;
-	MediaPlayer player;
-	
-	
-	public Track(String path) {
-		path = path.replaceAll(" ", "%20").replace("\\", "/").replace("[", "%5B").replace("]", "%5D");
-		this.path = path;
-		Media media = new Media("file:///" + this.path);
-		media.getMetadata().addListener((Change<? extends String, ? extends Object> c) -> {
-			if (c.wasAdded()) {
-				if ("artist".equals(c.getKey())) {
-					this.interpret = c.getValueAdded().toString();
-				} else if ("title".equals(c.getKey())) {
-					this.title = c.getValueAdded().toString();
-					//System.out.println(title);
-				}
-			}
-		});
-	}
-	
-	
-	
+	private String duration;
+	private Media media;
+		
+	public Track(Media media, String title, String album, String artist, String genre) {
+		this.media = media;
+		this.title = title;
+		this.album = album;
+		this.artist = artist;
+		this.genre = genre;
+		int s = (int) media.getDuration().toSeconds();
+		this.duration = String.format("%02d:%02d", (s % 3600) / 60, (s % 60));
 
-     
+	}
+	    
 
 	public String getTitle() {
 		return title;
@@ -56,13 +40,15 @@ public class Track {
 		this.genre = genre;
 	}
 
-	public String getInterpret() {
-		return interpret;
+	public String getArtist() {
+		return artist;
 	}
 
-	public void setInterpret(String interpret) {
-		this.interpret = interpret;
+
+	public void setArtist(String artist) {
+		this.artist = artist;
 	}
+
 
 	public String getAlbum() {
 		return album;
@@ -79,5 +65,26 @@ public class Track {
 	public void setPath(String path) {
 		this.path = path;
 	}
+
+
+	public Media getMedia() {
+		return media;
+	}
+
+
+	public void setMedia(Media media) {
+		this.media = media;
+	}
+
+
+	public String getDuration() {
+		return duration;
+	}
+
+
+	public void setDuration(String duration) {
+		this.duration = duration;
+	}
+
 	
 }
